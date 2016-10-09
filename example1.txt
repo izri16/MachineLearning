@@ -155,3 +155,29 @@ FROM
   FROM [piano-academy:riso_dataset.articles]
   WHERE clicks < uniqueUsers * 2)
 
+9.
+
+// run with STRFTIME_UTC_USEC(unixTimestamp, "%d") set to "01", "02", ... "10" to get
+// values for ten days interval
+
+SELECT created, SUM(clicks)
+FROM
+  (SELECT created, clicks
+    FROM (
+    SELECT
+        COUNT(url) as clicks,
+        STRFTIME_UTC_USEC(COALESCE(FIRST(contentCreated), MIN(unixTimestamp)), "%d") as created,
+        REGEXP_EXTRACT(url, r'-([A-Z]{2}[0-9]+)') AS commonFeature
+    FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+    WHERE contentAuthor <> '' AND STRFTIME_UTC_USEC(unixTimestamp, "%d") = "01"
+    GROUP BY commonFeature
+  )),
+  (SELECT
+    COUNT(url) as clicks,
+    STRFTIME_UTC_USEC(COALESCE(FIRST(contentCreated), MIN(unixTimestamp)), "%d") as created,
+  FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+  WHERE NOT (REGEXP_MATCH(HOST(url), r'elcolombiano')) AND STRFTIME_UTC_USEC(unixTimestamp, "%d") = "01"
+  GROUP BY url
+ )
+WHERE created = "01"
+GROUP BY created
