@@ -101,3 +101,64 @@ FROM (
 ) t2 on t1.url = t2.url
 WHERE clicks > 50
 ORDER BY clicks desc
+
+------------------------------------------------------------------------
+
+// features based on traffic to the article within the first hour publishing
+
+SELECT clicks, uniqueUsers, ROUND(ref/clicks, 2) as domainRefs,
+  ROUND(mobile/clicks, 2) as mobile, ROUND(tablet/clicks, 2) as tablet, ROUND(desktop/clicks, 2) as desktop, clicksTotal
+FROM (
+  SELECT url, clicks, uniqueUsers, mobile, tablet, desktop, ref
+  FROM (
+   SELECT url, contentCreated, contentAuthor, contentSection, clicks, uniqueUsers, mobile, tablet, desktop, ref
+    FROM (
+      SELECT 
+          FIRST(url) as url,
+          COUNT(url) as clicks,
+          COUNT_DISTINCT(browserId) as uniqueUsers,
+          COALESCE(FIRST(contentCreated), MIN(unixTimestamp)) as contentCreated,
+          FIRST(contentAuthor) as contentAuthor,
+          SUM(CASE WHEN (HOST(url) like '%'+rawReferrer+'%') THEN 1 ELSE 0 END) as ref,
+          SUM(CASE WHEN (platform = "desktop") THEN 1 ELSE 0 END) as desktop,
+          SUM(CASE WHEN (platform = "mobile") THEN 1 ELSE 0 END) as mobile,
+          SUM(CASE WHEN (platform = "tablet") THEN 1 ELSE 0 END) as tablet,
+          FIRST(contentSection) as contentSection,
+          REGEXP_EXTRACT(url, r'-([A-Z]{2}[0-9]+)') AS commonFeature
+      FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+      WHERE contentAuthor <> '' AND SUBSTR(STRING(hour), 9) = STRFTIME_UTC_USEC(contentCreated, "%H")
+      GROUP BY commonFeature
+    )),
+    (SELECT url,
+      COUNT(url) as clicks,
+      COUNT_DISTINCT(browserId) as uniqueUsers,
+      COALESCE(FIRST(contentCreated), MIN(unixTimestamp)) as contentCreated,
+      FIRST(contentAuthor) as contentAuthor,
+      FIRST(contentSection) as contentSection,
+    FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+    WHERE NOT (REGEXP_MATCH(HOST(url), r'elcolombiano')) AND SUBSTR(STRING(hour), 9) = STRFTIME_UTC_USEC(contentCreated, "%H")
+    GROUP BY url)
+  ) t1
+  INNER JOIN (
+      SELECT url, clicksTotal
+      FROM
+        (SELECT url, clicksTotal
+          FROM (
+          SELECT 
+              FIRST(url) as url,
+              COUNT(url) as clicksTotal,
+              REGEXP_EXTRACT(url, r'-([A-Z]{2}[0-9]+)') AS commonFeature
+          FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+          WHERE contentAuthor <> ''
+          GROUP BY commonFeature
+        )),
+        (SELECT url,
+          COUNT(url) as clicksTotal,
+        FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+        WHERE NOT (REGEXP_MATCH(HOST(url), r'elcolombiano'))
+        GROUP BY url)
+  ) t2
+  on t1.url = t2.url
+  WHERE clicks > 10
+  ORDER BY clicks desc
+ 
