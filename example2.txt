@@ -35,61 +35,61 @@ FROM (
       IFNULL(saturday, 0) as saturday,
     FROM (
       SELECT url, INTEGER(STRFTIME_UTC_USEC(contentCreated, "%H")) as hour
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
     ),
     (
       SELECT url, 1 as night
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE INTEGER(STRFTIME_UTC_USEC(contentCreated, "%H")) BETWEEN 0 AND 6
     ),
     (
       SELECT url, 1 as morning
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE INTEGER(STRFTIME_UTC_USEC(contentCreated, "%H")) BETWEEN 7 AND 12
     ),
     (
       SELECT url, 1 as afternoon
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE INTEGER(STRFTIME_UTC_USEC(contentCreated, "%H")) BETWEEN 13 AND 18
     ),
     (
       SELECT url, 1 as evening
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE INTEGER(STRFTIME_UTC_USEC(contentCreated, "%H")) BETWEEN 19 AND 23
     ),
     (
       SELECT url, 1 as sunday
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 1
     ),
     (
       SELECT url, 1 as monday,
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 2
     ),
     (
       SELECT url, 1 as tuesday
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 3
     ),
     (
       SELECT url, 1 as wednesday
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 4
     ),
     (
       SELECT url, 1 as thursday
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 5
     ),
     (
       SELECT url, 1 as friday
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 6
     ),
     (
       SELECT url, 1 as saturday
-      FROM [piano-academy:riso_dataset.articles]
+      FROM [piano-academy:riso_dataset.uniqueArticles]
       WHERE DAYOFWEEK(contentCreated) = 7
     ),
    )
@@ -97,7 +97,7 @@ FROM (
  ) t1
  INNER JOIN (
   SELECT url, clicks
-  FROM [piano-academy:riso_dataset.articles]
+  FROM [piano-academy:riso_dataset.uniqueArticles]
 ) t2 on t1.url = t2.url
 WHERE clicks > 50
 ORDER BY clicks desc
