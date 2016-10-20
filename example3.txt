@@ -1,5 +1,5 @@
 // filted wrong timestamp
-SELECT DATE_ADD(unixTimestamp, timezoneOffset, "HOUR") as timestampLocal, *
+SELECT DATE_ADD(unixTimestamp, timezoneOffset, "MINUTE") as timestampLocal, *
 FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
 WHERE NOT abs(timezoneOffset) > 720 AND NOT abs(timezoneOffset) % 60 <> 0
 
@@ -7,7 +7,7 @@ WHERE NOT abs(timezoneOffset) > 720 AND NOT abs(timezoneOffset) % 60 <> 0
 SELECT url,
     COUNT(url) as clicks,
     COUNT_DISTINCT(browserId) as uniqueUsers,
-    COALESCE(FIRST(contentCreated), MIN(TIMESTAMP_TO_SEC(timestampLocal))) as contentCreated,
+    COALESCE(FIRST(UNIQUE(contentCreated)), MIN(timestampLocal)) as contentCreated,
     FIRST(LOWER(contentAuthor)) as contentAuthor,
     FIRST(LOWER(contentSection)) as contentSection,
 FROM [piano-academy:riso_dataset.filteredOffset]
