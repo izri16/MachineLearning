@@ -1,0 +1,15 @@
+// filted wrong timestamp
+SELECT DATE_ADD(unixTimestamp, timezoneOffset, "HOUR") as timestampLocal, *
+FROM [piano-academy:riso_dataset.logs_7qx5egZQFY_201606_copy]
+WHERE NOT abs(timezoneOffset) > 720 AND NOT abs(timezoneOffset) % 60 <> 0
+
+// create articles table
+SELECT url,
+    COUNT(url) as clicks,
+    COUNT_DISTINCT(browserId) as uniqueUsers,
+    COALESCE(FIRST(contentCreated), MIN(TIMESTAMP_TO_SEC(timestampLocal))) as contentCreated,
+    FIRST(LOWER(contentAuthor)) as contentAuthor,
+    FIRST(LOWER(contentSection)) as contentSection,
+FROM [piano-academy:riso_dataset.filteredOffset]
+WHERE NOT contentAuthor is NULL AND contentAuthor <> '' 
+GROUP BY url
