@@ -17,7 +17,7 @@ GROUP BY url
 // create data available when article is created
 SELECT url, INTEGER(STRFTIME_UTC_USEC(contentCreated, "%H")) as hour,
 INTEGER(STRFTIME_UTC_USEC(contentCreated, "%d")) as day, contentAuthor, contentSection, clicks
-FROM [piano-academy:riso_dataset.uniqueArticlesFilteredOffset]
+FROM [piano-academy:riso_dataset.articles]
 WHERE clicks > 50
 ORDER BY clicks desc
 
