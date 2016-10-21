@@ -48,3 +48,30 @@ FROM [piano-academy:riso_dataset.parsedDataFirstHourAll]
 GROUP by url
 ORDER by c desc 
 
+// data for first hour
+SELECT clicksFirstHour, day, hour, round(ref/clicksFirstHour,3) as ref, round(desktop/clicksFirstHour,3) as desktop,
+  round(mobile/clicksFirstHour,3) as mobile, round(tablet/clicksFirstHour,3) as tablet, contentAuthor,
+  contentSection, totalClicks
+FROM (
+SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(parsedContentCreated))) as day,
+  HOUR(TIMESTAMP(first(parsedContentCreated))) as hour,
+  SUM(CASE WHEN (rawReferrer like "%"+HOST(url)+"%") THEN 1 ELSE 0 END) as ref,
+  SUM(CASE WHEN (platform = "desktop") THEN 1 ELSE 0 END) as desktop,
+  SUM(CASE WHEN (platform = "mobile") THEN 1 ELSE 0 END) as mobile,
+  SUM(CASE WHEN (platform = "tablet") THEN 1 ELSE 0 END) as tablet,
+  first(contentAuthor) as contentAuthor, first(contentSection) as contentSection, first(clicks) as totalClicks
+ FROM [piano-academy:riso_dataset.parsedDataFirstHourAll]
+ GROUP by url
+)
+ORDER by clicksFirstHour desc
+
+// data available when article is created
+SELECT 
+  DAY(TIMESTAMP(first(parsedContentCreated))) as day,
+  HOUR(TIMESTAMP(first(parsedContentCreated))) as hour,
+  first(contentAuthor) as contentAuthor, first(contentSection) as contentSection, count(url) as clicks
+FROM [piano-academy:riso_dataset.parsedData]
+GROUP BY url
+HAVING clicks > 10
+ORDER BY clicks DESC
+
