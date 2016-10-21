@@ -1,0 +1,50 @@
+Tables
+    parsedHour - add hour in nice format to all data
+    parsedData - from parsedHour select only article clicks
+    parsedDataFirstHourAll - all information about clicks within first hour
+
+// parse hour
+SELECT TIMESTAMP(h_year + "-" + h_month + "-" + h_day + " " + h_hour + ":00:00") as parsedHour, *
+FROM (
+  SELECT REGEXP_EXTRACT(STRING(hour),r'([0-9]{4})[0-9]{2}[0-9]{2}[0-9]{2}') AS h_year,
+  REGEXP_EXTRACT(STRING(hour),r'[0-9]{4}([0-9]{2})[0-9]{2}[0-9]{2}') AS h_month,
+  REGEXP_EXTRACT(STRING(hour),r'[0-9]{4}[0-9]{2}([0-9]{2})[0-9]{2}') AS h_day,
+  REGEXP_EXTRACT(STRING(hour),r'[0-9]{4}[0-9]{2}[0-9]{2}([0-9]{2})') AS h_hour,
+  *
+  FROM riso_dataset.logs_7qx5egZQFY_201606_copy
+)
+
+// select only article clicks and add parsedContentCreated field
+SELECT COALESCE(contentCreated, minHour) as parsedContentCreated, t2.*
+FROM (
+  SELECT url,
+      MIN(parsedHour) as minHour,
+      FROM [piano-academy:riso_dataset.parsedHour]
+      WHERE NOT contentAuthor is NULL AND contentAuthor <> '' 
+      GROUP BY url
+  ) t1
+  INNER JOIN (
+    SELECT *
+    FROM [piano-academy:riso_dataset.parsedHour]
+  ) t2 on t1.url = t2.url
+
+// cliks in first hour with totalCount for each url, with reserve error (-600)
+SELECT t1.*, clicks
+FROM (
+  SELECT *
+  FROM [piano-academy:riso_dataset.parsedData]
+  WHERE ((DATE_ADD(TIMESTAMP_TO_SEC(unixTimestamp), timezoneOffset/60, 'hour')  - (DATE_ADD(TIMESTAMP_TO_SEC(unixTimestamp), timezoneOffset/60, 'hour') - TIMESTAMP_TO_SEC(parsedHour))) - TIMESTAMP_TO_SEC(parsedContentCreated)) < 3600 AND
+  ((DATE_ADD(TIMESTAMP_TO_SEC(unixTimestamp), timezoneOffset/60, 'hour')  - (DATE_ADD(TIMESTAMP_TO_SEC(unixTimestamp), timezoneOffset/60, 'hour') - TIMESTAMP_TO_SEC(parsedHour))) - TIMESTAMP_TO_SEC(parsedContentCreated)) > -600
+) t1
+INNER JOIN (
+  SELECT url, count(*) as clicks
+  FROM [piano-academy:riso_dataset.parsedData]
+  GROUP BY url
+) t2 on t1.url = t2.url
+
+// get first hour information (something like)
+SELECT count(*) as c, first(clicks) as total
+FROM [piano-academy:riso_dataset.parsedDataFirstHourAll]
+GROUP by url
+ORDER by c desc 
+
