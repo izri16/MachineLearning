@@ -49,11 +49,12 @@ GROUP by url
 ORDER by c desc 
 
 // data for first hour
-SELECT clicksFirstHour, day, hour, round(ref/clicksFirstHour,3) as ref, round(desktop/clicksFirstHour,3) as desktop,
+SELECT clicksFirstHour, uniqueUsers, day, hour, round(ref/clicksFirstHour,3) as ref, round(desktop/clicksFirstHour,3) as desktop,
   round(mobile/clicksFirstHour,3) as mobile, round(tablet/clicksFirstHour,3) as tablet, contentAuthor,
   contentSection, totalClicks
 FROM (
 SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(parsedContentCreated))) as day,
+  count_distinct(browserid) as uniqueUsers,
   HOUR(TIMESTAMP(first(parsedContentCreated))) as hour,
   SUM(CASE WHEN (rawReferrer like "%"+HOST(url)+"%") THEN 1 ELSE 0 END) as ref,
   SUM(CASE WHEN (platform = "desktop") THEN 1 ELSE 0 END) as desktop,
