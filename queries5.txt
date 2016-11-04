@@ -1,0 +1,60 @@
+// get wrong contentCreated values
+SELECT count(*)
+FROM riso_dataset.logs_hFK5b6ibPi_201609_copy
+WHERE contentCreated IS NOT NULL AND contentCreated > unixTimestamp AND 
+    contentAuthor IS NOT NULL AND contentAuthor <> ''
+
+// articles_clicks
+SELECT *
+FROM riso_dataset.logs_hFK5b6ibPi_201609_copy
+WHERE contentAuthor IS NOT NULL AND contentAuthor <> '' AND contentCreated IS NOT NULL
+
+// new contentCreatedFix variable (articles_clicks_content_created)
+SELECT
+  CASE WHEN (contentCreated > unixTimestamp)
+    THEN USEC_TO_TIMESTAMP(unixTimestamp) ELSE USEC_TO_TIMESTAMP(contentCreated)
+   END as contentCreatedFixed, *
+FROM riso_dataset.articles_clicks
+
+// all within first hour (articles_clicks_first_hour_all)
+SELECT t1.*, totalClicks
+FROM (
+  SELECT *
+  FROM [piano-academy:riso_dataset.articles_clicks_content_created]
+  WHERE (TIMESTAMP_TO_SEC(unixTimestamp)-TIMESTAMP_TO_SEC(contentCreatedFixed)) < 3600
+) t1
+INNER JOIN (
+  SELECT url, count(*) as totalClicks
+  FROM [piano-academy:riso_dataset.articles_clicks_content_created]
+  GROUP BY url
+) t2 ON t1.url = t2.url
+
+/// within first hour concrete data (first_hour_data)
+SELECT clicksFirstHour, uniqueUsers, day, hour, ROUND(ref/clicksFirstHour,3) as ref, ROUND(desktop/clicksFirstHour,3) as desktop,
+  ROUND(mobile/clicksFirstHour,3) as mobile, ROUND(tablet/clicksFirstHour,3) as tablet, contentAuthor,
+  contentSection, totalClicks
+FROM (
+SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(contentCreatedFixed))) as day,
+  COUNT_DISTINCT(browserid) as uniqueUsers,
+  HOUR(TIMESTAMP(first(contentCreatedFixed))) as hour,
+  SUM(CASE WHEN (rawReferrer like "%"+HOST(url)+"%") THEN 1 ELSE 0 END) as ref,
+  SUM(CASE WHEN (platform = "desktop") THEN 1 ELSE 0 END) as desktop,
+  SUM(CASE WHEN (platform = "mobile") THEN 1 ELSE 0 END) as mobile,
+  SUM(CASE WHEN (platform = "tablet") THEN 1 ELSE 0 END) as tablet,
+  FIRST(contentAuthor) as contentAuthor, FIRST(contentSection) as contentSection, FIRST(totalClicks) as totalClicks
+ FROM [piano-academy:riso_dataset.articles_clicks_first_hour_all]
+ GROUP by url
+)
+WHERE clicksFirstHour > 3
+ORDER by clicksFirstHour desc
+
+// immediately_data
+SELECT 
+  DAY(TIMESTAMP(first(contentCreatedFixed))) as day,
+  HOUR(TIMESTAMP(first(contentCreatedFixed))) as hour,
+  FIRST(contentAuthor) as contentAuthor, FIRST(contentSection) as contentSection, COUNT(url) as clicks
+FROM [piano-academy:riso_dataset.articles_clicks_content_created]
+GROUP BY url
+HAVING clicks > 10
+ORDER BY clicks DESC
+
