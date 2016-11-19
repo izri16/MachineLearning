@@ -71,11 +71,10 @@ users_p = users_p[:, 0:2]
 c_u = np.multiply(clicks_p[:, 0:1], users_p[:, 0:1])
 
 days = X[:, 3]
-X = np.concatenate((X[:, 0:3], clicks_p, users_p, c_u, hours_d), axis=1)
+X = np.concatenate((X[:, 0:2], clicks_p, users_p, c_u, hours_d), axis=1)
 
 X = X.astype(np.float)
 y = y.astype(np.float)
-print('X shape', X.shape, 'y shape', y.shape)
 
 # comment out to split test set randomly
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4,
@@ -123,5 +122,5 @@ plt.legend(loc=2)
 plt.title('Linear regression (Created data)')
 plt.xlabel('Page view id')
 plt.ylabel('Total clicks')
-plt.x
+plt.xlim([0, 200])
 plt.show()
