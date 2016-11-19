@@ -1,4 +1,7 @@
 import sklearn.linear_model as lm
+import sklearn.neural_network as nn
+import sklearn.svm as svm
+import sklearn.ensemble as dt
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -84,10 +87,26 @@ y = y.astype(np.float)
 
 X_train, X_test, y_train, y_test = split_set(X, y, days)
 
-lr = lm.LinearRegression()
-lr.fit(X_train, y_train)
+# lr = lm.LinearRegression() # experiment with polynomials
+# lr.fit(X_train, y_train)
+# y_predicted = lr.predict(X_test)
 
-y_predicted = lr.predict(X_test)
+# nm = nn.MLPRegressor()  # experiment with hidden_layer_sizes
+# nm.fit(X_train, y_train)
+# y_predicted = nm.predict(X_test)
+
+# experiment with kernel, gamma, degree, C
+# svr = svm.SVR(C=10000, gamma=0.000000001)
+# svr.fit(X_train, y_train)
+# y_predicted = svr.predict(X_test)
+
+# rf = dt.RandomForestRegressor()
+# rf.fit(X_train, y_train)
+# y_predicted = rf.predict(X_test)
+
+bt = dt.GradientBoostingRegressor()
+bt.fit(X_train, y_train)
+y_predicted = bt.predict(X_test)
 
 # some values can be predicted weird negative results
 # or weird positive results
