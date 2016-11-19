@@ -3,11 +3,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
-# import os
 
-# from sklearn.model_selection import train_test_split
 
 data = []
+hour_position = 4
+author_position = 9
+section_position = 10
+day_position = 3
+ref_position = 5
+min_predicted_value = 3
 
 
 def day_times(hour):
@@ -29,7 +33,7 @@ def split_set(x, y, days):
     y_train = []
     y_test = []
     for index, value in enumerate(days):
-        if (int(value) in [31, 0, 1, 2, 3, 4]):
+        if (int(value) < 15):
             x_train.append(xl[index])
             y_train.append(yl[index])
         else:
@@ -38,7 +42,7 @@ def split_set(x, y, days):
     return (np.array(x_train), np.array(x_test), np.array(y_train),
             np.array(y_test))
 
-with open('dataFirstHour.csv', newline='') as csvfile:
+with open('first_hour_data.csv', newline='') as csvfile:
     reader = csv.reader(csvfile, delimiter=',', quotechar='|')
     i = 0
     for row in reader:
@@ -48,37 +52,35 @@ with open('dataFirstHour.csv', newline='') as csvfile:
             i += 1
 
 data = np.array(data)
-y = data[:, len(data[0, :]) - 1]  # last columns
-X = data[:, 0:len(data[0, :]) - 1]
-ones = np.ones((len(X), 1))  # add column of ones
-X = np.concatenate([ones, X], axis=1)
+y = data[:, -1]
+X = data[:, 0:-1]
 
 # day time dummies
-hours = list(X[:, 4].astype(float))
-hours = np.array(list(map(day_times, hours)))
-hours_d = np.array(pd.get_dummies(hours))
+hours = list(X[:, hour_position].astype(float))
+hours_labeled = np.array(list(map(day_times, hours)))
+hours_d = np.array(pd.get_dummies(hours_labeled))
 
 # author dummies
-author_d = np.array(pd.get_dummies(X[:, 9]))
+author_d = np.array(pd.get_dummies(X[:, author_position]))
 
 # section dummies
-section_d = np.array(pd.get_dummies(X[:, 10]))
+section_d = np.array(pd.get_dummies(X[:, section_position]))
 
-clicks_p = np.vander(X[:, 1].astype(float), 3)
-users_p = np.vander(X[:, 2].astype(float), 3)
-clicks_p = clicks_p[:, 0:2]
-users_p = users_p[:, 0:2]
-c_u = np.multiply(clicks_p[:, 0:1], users_p[:, 0:1])
+# polynomial features
+# clicks_p = np.vander(X[:, 1].astype(float), 3)
+# users_p = np.vander(X[:, 2].astype(float), 3)
+# clicks_p = clicks_p[:, 0:2]
+# users_p = users_p[:, 0:2]
+# c_u = np.multiply(clicks_p[:, 0:1], users_p[:, 0:1])
 
-days = X[:, 3]
-X = np.concatenate((X[:, 0:2], clicks_p, users_p, c_u, hours_d), axis=1)
+days = X[:, day_position]
+# remove day from features, only used to divide to training and testing data
+X = np.concatenate((X[:, 0:day_position], hours_d,
+                    X[:, ref_position:author_position], author_d,
+                    section_d), axis=1)
 
-X = X.astype(np.float)
+X = X.astype(float)
 y = y.astype(np.float)
-
-# comment out to split test set randomly
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4,
-#        random_state=42)
 
 X_train, X_test, y_train, y_test = split_set(X, y, days)
 
@@ -87,15 +89,7 @@ lr.fit(X_train, y_train)
 
 y_predicted = lr.predict(X_test)
 
-# print('Coefficients', lr.coef_)
-
-res = abs(y_test - y_predicted)
-error_m = np.mean(res)
-error_r = np.sqrt(np.mean(res**2))
-print('Mean error', error_m)
-print('Root squared error', error_r)
-
-# some values are predicted weird negative results
+# some values can be predicted weird negative results
 # or weird positive results
 predicted = []
 max_value = max(y)
@@ -105,16 +99,20 @@ for i in list(y_predicted):
     elif (i >= max_value * 2):
         predicted.append(max_value * 2)
     else:
-        predicted.append(0)
+        predicted.append(min_predicted_value)
 
 predicted = np.array(predicted)
-res = abs(y_test - predicted)
-error_m = np.mean(res)
-error_r = np.sqrt(np.mean(res**2))
-print('Mean error (remove negatives)', error_m)
-print('Root squared error (remove negatives)', error_r)
 
-# Use when article is created
+mae = np.mean(np.absolute(y_test - predicted))
+print('MAE', mae)
+
+mspe = np.mean((np.square(np.divide(y_test - predicted, y_test))))
+print('MSPE', mspe)
+
+rmspe = np.sqrt(
+    np.mean((np.square(np.divide(y_test - predicted, y_test)))))
+print('RMSPE', rmspe)
+
 plt.figure(1)
 plt.plot(y_test, 'ok', label='Test values')
 plt.plot(predicted, 'or', label='Predicted values')
@@ -122,5 +120,5 @@ plt.legend(loc=2)
 plt.title('Linear regression (Created data)')
 plt.xlabel('Page view id')
 plt.ylabel('Total clicks')
-plt.xlim([0, 200])
+# plt.xlim([0, 500])
 plt.show()
