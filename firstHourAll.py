@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 from sklearn import metrics as mt
+from sklearn.preprocessing import PolynomialFeatures
+# from sklearn.preprocessing import scale
 
 data = []
 hour_position = 4
@@ -36,7 +38,7 @@ def split_set(x, y, days):
     y_train = []
     y_test = []
     for index, value in enumerate(days):
-        if (int(value) < 15):
+        if (int(value) < 21):
             x_train.append(xl[index])
             y_train.append(yl[index])
         else:
@@ -64,23 +66,55 @@ def clear_predictions(y_predicted):
 
 
 def show_results(y_test, predicted):
-    print('MAE', mt.mean_absolute_error(y_test, predicted))
-    print('MSE', mt.mean_squared_error(y_test, predicted))
+    print('MAE', round(mt.mean_absolute_error(y_test, predicted), 3))
+    print('MSE', round(mt.mean_squared_error(y_test, predicted), 3))
+    mspe = np.mean((np.square(np.divide(y_test - predicted, y_test))))
+    print('MSPE', round(mspe, 3))
     rmspe = np.sqrt(
         np.mean((np.square(np.divide(y_test - predicted, y_test)))))
-    print('RMSPE', rmspe)
+    print('RMSPE', round(rmspe, 3))
 
 
 def plot_results(y_test, predicted):
     plt.figure(1)
     plt.plot(y_test, 'ok', label='Test values')
     plt.plot(predicted, 'or', label='Predicted values')
-    plt.legend(loc=2)
-    plt.title('Linear regression (Created data)')
+    plt.legend(loc=1)
+    plt.title('Linear regression')
     plt.xlabel('Page view id')
     plt.ylabel('Total clicks')
-    # plt.xlim([0, 500])
+    # plt.ylim([0, 500])
+    plt.xlim([0, 500])
     plt.show()
+
+
+def get_polynomial_features(x):
+    poly = PolynomialFeatures(3)
+    poly_features = poly.fit_transform(x[:, 0:3])
+    return poly_features
+    # return np.hstack((poly_features, x[:, 3:4]))
+
+
+def get_basic_features(x):
+    return X[:, 0:3]
+
+
+def preprocess_authors_sections(items, threshold_factor=50):
+    items_list = list(map(lambda x: x.lower().strip(), list(items)))
+    counts = {}
+    for item in items_list:
+        if (item in counts):
+            counts[item] += 1
+        else:
+            counts[item] = 1
+    threshold = len(items_list) // threshold_factor
+    preprocessed_authors = []
+    for item in items_list:
+        if (counts[item] > threshold):
+            preprocessed_authors.append(item)
+        else:
+            preprocessed_authors.append('none')
+    return np.array(preprocessed_authors)
 
 
 def predict_regression(x_train, y_train, x_test):
@@ -131,17 +165,11 @@ hours_labeled = np.array(list(map(day_times, hours)))
 hours_d = np.array(pd.get_dummies(hours_labeled))
 
 # author dummies
-author_d = np.array(pd.get_dummies(X[:, author_position]))
+author_d = np.array(pd.get_dummies(
+    preprocess_authors_sections(X[:, author_position], 50)))
 
 # section dummies
 section_d = np.array(pd.get_dummies(X[:, section_position]))
-
-# polynomial features
-# clicks_p = np.vander(X[:, 1].astype(float), 3)
-# users_p = np.vander(X[:, 2].astype(float), 3)
-# clicks_p = clicks_p[:, 0:2]
-# users_p = users_p[:, 0:2]
-# c_u = np.multiply(clicks_p[:, 0:1], users_p[:, 0:1])
 
 days = X[:, day_position]
 # remove day from features, only used to divide to training and testing data
@@ -152,6 +180,10 @@ X = np.concatenate((X[:, 0:day_position], hours_d,
 X = X.astype(float)
 y = y.astype(np.float)
 
+# get only clicks, unique users and acceleration for regression
+# X = get_basic_features(X)
+
+# X = get_polynomial_features(X)
 X_train, X_test, y_train, y_test = split_set(X, y, days)
 
 y_predicted = predict_regression(X_train, y_train, X_test)
