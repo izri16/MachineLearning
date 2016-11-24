@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
-
+from sklearn import metrics as mt
 
 data = []
 hour_position = 4
@@ -44,6 +44,73 @@ def split_set(x, y, days):
             y_test.append(yl[index])
     return (np.array(x_train), np.array(x_test), np.array(y_train),
             np.array(y_test))
+
+
+def clear_predictions(y_predicted):
+    '''
+    some values can be predicted weird negative results
+    or weird positive results
+    '''
+    predicted = []
+    max_value = max(y)
+    for i in list(y_predicted):
+        if i > 0 and i < max_value * 2:
+            predicted.append(i)
+        elif (i >= max_value * 2):
+            predicted.append(max_value * 2)
+        else:
+            predicted.append(min_predicted_value)
+    return np.array(predicted)
+
+
+def show_results(y_test, predicted):
+    print('MAE', mt.mean_absolute_error(y_test, predicted))
+    print('MSE', mt.mean_squared_error(y_test, predicted))
+    rmspe = np.sqrt(
+        np.mean((np.square(np.divide(y_test - predicted, y_test)))))
+    print('RMSPE', rmspe)
+
+
+def plot_results(y_test, predicted):
+    plt.figure(1)
+    plt.plot(y_test, 'ok', label='Test values')
+    plt.plot(predicted, 'or', label='Predicted values')
+    plt.legend(loc=2)
+    plt.title('Linear regression (Created data)')
+    plt.xlabel('Page view id')
+    plt.ylabel('Total clicks')
+    # plt.xlim([0, 500])
+    plt.show()
+
+
+def predict_regression(x_train, y_train, x_test):
+    lr = lm.LinearRegression()
+    lr.fit(x_train, y_train)
+    return lr.predict(x_test)
+
+
+def predict_neural(x_train, y_train, x_test):
+    nm = nn.MLPRegressor()
+    nm.fit(x_train, y_train)
+    return nm.predict(x_test)
+
+
+def predict_svm(x_train, y_train, x_test):
+    svr = svm.SVR(C=10000, gamma=0.000000001)
+    svr.fit(x_train, y_train)
+    return svr.predict(x_test)
+
+
+def predict_random_forest(x_train, y_train, x_test):
+    rf = dt.RandomForestRegressor()
+    rf.fit(x_train, y_train)
+    return rf.predict(x_test)
+
+
+def predict_boosted_tree(x_train, y_test, x_test):
+    bt = dt.GradientBoostingRegressor()
+    bt.fit(x_train, y_train)
+    return bt.predict(x_test)
 
 with open('first_hour_data.csv', newline='') as csvfile:
     reader = csv.reader(csvfile, delimiter=',', quotechar='|')
@@ -87,57 +154,8 @@ y = y.astype(np.float)
 
 X_train, X_test, y_train, y_test = split_set(X, y, days)
 
-# lr = lm.LinearRegression() # experiment with polynomials
-# lr.fit(X_train, y_train)
-# y_predicted = lr.predict(X_test)
+y_predicted = predict_regression(X_train, y_train, X_test)
+predicted = clear_predictions(y_predicted)
 
-# nm = nn.MLPRegressor()  # experiment with hidden_layer_sizes
-# nm.fit(X_train, y_train)
-# y_predicted = nm.predict(X_test)
-
-# experiment with kernel, gamma, degree, C
-# svr = svm.SVR(C=10000, gamma=0.000000001)
-# svr.fit(X_train, y_train)
-# y_predicted = svr.predict(X_test)
-
-# rf = dt.RandomForestRegressor()
-# rf.fit(X_train, y_train)
-# y_predicted = rf.predict(X_test)
-
-bt = dt.GradientBoostingRegressor()
-bt.fit(X_train, y_train)
-y_predicted = bt.predict(X_test)
-
-# some values can be predicted weird negative results
-# or weird positive results
-predicted = []
-max_value = max(y)
-for i in list(y_predicted):
-    if i > 0 and i < max_value * 2:
-        predicted.append(i)
-    elif (i >= max_value * 2):
-        predicted.append(max_value * 2)
-    else:
-        predicted.append(min_predicted_value)
-
-predicted = np.array(predicted)
-
-mae = np.mean(np.absolute(y_test - predicted))
-print('MAE', mae)
-
-mspe = np.mean((np.square(np.divide(y_test - predicted, y_test))))
-print('MSPE', mspe)
-
-rmspe = np.sqrt(
-    np.mean((np.square(np.divide(y_test - predicted, y_test)))))
-print('RMSPE', rmspe)
-
-plt.figure(1)
-plt.plot(y_test, 'ok', label='Test values')
-plt.plot(predicted, 'or', label='Predicted values')
-plt.legend(loc=2)
-plt.title('Linear regression (Created data)')
-plt.xlabel('Page view id')
-plt.ylabel('Total clicks')
-# plt.xlim([0, 500])
-plt.show()
+show_results(y_test, predicted)
+plot_results(y_test, predicted)
