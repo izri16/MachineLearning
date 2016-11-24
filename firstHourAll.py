@@ -16,7 +16,6 @@ author_position = 9
 section_position = 10
 day_position = 3
 ref_position = 5
-min_predicted_value = 3
 
 
 def day_times(hour):
@@ -53,6 +52,7 @@ def clear_predictions(y_predicted):
     some values can be predicted weird negative results
     or weird positive results
     '''
+    min_predicted_value = 3
     predicted = []
     max_value = max(y)
     for i in list(y_predicted):
@@ -77,13 +77,21 @@ def show_results(y_test, predicted):
 
 def plot_results(y_test, predicted):
     plt.figure(1)
+    plt.subplot(211)
     plt.plot(y_test, 'ok', label='Test values')
     plt.plot(predicted, 'or', label='Predicted values')
     plt.legend(loc=1)
-    plt.title('Linear regression')
+    plt.title('SVM (rbf)')
     plt.xlabel('Page view id')
     plt.ylabel('Total clicks')
-    # plt.ylim([0, 500])
+    plt.ylim([0, 500])
+
+    plt.subplot(212)
+    plt.plot(y_test, 'ok', label='Test values')
+    plt.plot(predicted, 'or', label='Predicted values')
+    plt.legend(loc=1)
+    plt.xlabel('Page view id')
+    plt.ylabel('Total clicks')
     plt.xlim([0, 500])
     plt.show()
 
@@ -130,7 +138,11 @@ def predict_neural(x_train, y_train, x_test):
 
 
 def predict_svm(x_train, y_train, x_test):
-    svr = svm.SVR(C=10000, gamma=0.000000001)
+    # RBF kernel
+    svr = svm.SVR(C=5000, gamma=0.0000001)
+
+    # Poly kernel
+    # svr = svm.SVR(kernel='poly', degree=2, C=1)
     svr.fit(x_train, y_train)
     return svr.predict(x_test)
 
@@ -186,7 +198,7 @@ y = y.astype(np.float)
 # X = get_polynomial_features(X)
 X_train, X_test, y_train, y_test = split_set(X, y, days)
 
-y_predicted = predict_regression(X_train, y_train, X_test)
+y_predicted = predict_svm(X_train, y_train, X_test)
 predicted = clear_predictions(y_predicted)
 
 show_results(y_test, predicted)
