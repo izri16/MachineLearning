@@ -67,12 +67,9 @@ def clear_predictions(y_predicted):
 
 def show_results(y_test, predicted):
     print('MAE', round(mt.mean_absolute_error(y_test, predicted), 3))
-    print('MSE', round(mt.mean_squared_error(y_test, predicted), 3))
-    mspe = np.mean((np.square(np.divide(y_test - predicted, y_test))))
-    print('MSPE', round(mspe, 3))
     rmspe = np.sqrt(
         np.mean((np.square(np.divide(y_test - predicted, y_test)))))
-    print('RMSPE', round(rmspe, 3))
+    print('RMSPE', round(rmspe, 5) * 100)
 
 
 def plot_results(y_test, predicted):
@@ -81,7 +78,7 @@ def plot_results(y_test, predicted):
     plt.plot(y_test, 'ok', label='Test values')
     plt.plot(predicted, 'or', label='Predicted values')
     plt.legend(loc=1)
-    plt.title('SVM (rbf)')
+    plt.title('Random forest')
     plt.xlabel('Page view id')
     plt.ylabel('Total clicks')
     plt.ylim([0, 500])
@@ -132,7 +129,7 @@ def predict_regression(x_train, y_train, x_test):
 
 
 def predict_neural(x_train, y_train, x_test):
-    nm = nn.MLPRegressor()
+    nm = nn.MLPRegressor(alpha=0.01, hidden_layer_sizes=(15, 15, 15))
     nm.fit(x_train, y_train)
     return nm.predict(x_test)
 
@@ -148,13 +145,14 @@ def predict_svm(x_train, y_train, x_test):
 
 
 def predict_random_forest(x_train, y_train, x_test):
-    rf = dt.RandomForestRegressor()
+    rf = dt.RandomForestRegressor(
+        n_estimators=50, max_depth=10)
     rf.fit(x_train, y_train)
     return rf.predict(x_test)
 
 
 def predict_boosted_tree(x_train, y_test, x_test):
-    bt = dt.GradientBoostingRegressor()
+    bt = dt.GradientBoostingRegressor(n_estimators=100, max_depth=8)
     bt.fit(x_train, y_train)
     return bt.predict(x_test)
 
@@ -193,12 +191,12 @@ X = X.astype(float)
 y = y.astype(np.float)
 
 # get only clicks, unique users and acceleration for regression
-# X = get_basic_features(X)
+X = get_basic_features(X)
 
 # X = get_polynomial_features(X)
 X_train, X_test, y_train, y_test = split_set(X, y, days)
 
-y_predicted = predict_svm(X_train, y_train, X_test)
+y_predicted = predict_boosted_tree(X_train, y_train, X_test)
 predicted = clear_predictions(y_predicted)
 
 show_results(y_test, predicted)
