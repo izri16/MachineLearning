@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import csv
 from sklearn import metrics as mt
 from sklearn.preprocessing import PolynomialFeatures
-# from sklearn.preprocessing import scale
 
 data = []
 hour_position = 4
@@ -47,7 +46,7 @@ def split_set(x, y, days):
             np.array(y_test))
 
 
-def clear_predictions(y_predicted):
+def clear_predictions(y_predicted, y):
     '''
     some values can be predicted weird negative results
     or weird positive results
@@ -78,7 +77,7 @@ def plot_results(y_test, predicted):
     plt.plot(y_test, 'ok', label='Test values')
     plt.plot(predicted, 'or', label='Predicted values')
     plt.legend(loc=1)
-    plt.title('Random forest')
+    plt.title('SVM')
     plt.xlabel('Page view id')
     plt.ylabel('Total clicks')
     plt.ylim([0, 500])
@@ -101,7 +100,7 @@ def get_polynomial_features(x):
 
 
 def get_basic_features(x):
-    return X[:, 0:3]
+    return x[:, 0:3]
 
 
 def preprocess_authors_sections(items, threshold_factor=50):
@@ -129,14 +128,15 @@ def predict_regression(x_train, y_train, x_test):
 
 
 def predict_neural(x_train, y_train, x_test):
-    nm = nn.MLPRegressor(alpha=0.01, hidden_layer_sizes=(15, 15, 15))
+    nm = nn.MLPRegressor(
+        alpha=0.01, hidden_layer_sizes=(100, 100))
     nm.fit(x_train, y_train)
     return nm.predict(x_test)
 
 
 def predict_svm(x_train, y_train, x_test):
     # RBF kernel
-    svr = svm.SVR(C=5000, gamma=0.0000001)
+    svr = svm.SVR(C=1, gamma=1)
 
     # Poly kernel
     # svr = svm.SVR(kernel='poly', degree=2, C=1)
@@ -151,53 +151,55 @@ def predict_random_forest(x_train, y_train, x_test):
     return rf.predict(x_test)
 
 
-def predict_boosted_tree(x_train, y_test, x_test):
+def predict_boosted_tree(x_train, y_train, x_test):
     bt = dt.GradientBoostingRegressor(n_estimators=100, max_depth=8)
     bt.fit(x_train, y_train)
     return bt.predict(x_test)
 
-with open('first_hour_data.csv', newline='') as csvfile:
-    reader = csv.reader(csvfile, delimiter=',', quotechar='|')
-    i = 0
-    for row in reader:
-        if (row):
-            if (i != 0):
-                data.append(row)
-            i += 1
+if __name__ == "__main__":
+    with open('first_hour_data.csv', newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+        i = 0
+        for row in reader:
+            if (row):
+                if (i != 0):
+                    data.append(row)
+                i += 1
 
-data = np.array(data)
-y = data[:, -1]
-X = data[:, 0:-1]
+    data = np.array(data)
+    y = data[:, -1]
+    X = data[:, 0:-1]
 
-# day time dummies
-hours = list(X[:, hour_position].astype(float))
-hours_labeled = np.array(list(map(day_times, hours)))
-hours_d = np.array(pd.get_dummies(hours_labeled))
+    # day time dummies
+    hours = list(X[:, hour_position].astype(float))
+    hours_labeled = np.array(list(map(day_times, hours)))
+    hours_d = np.array(pd.get_dummies(hours_labeled))
 
-# author dummies
-author_d = np.array(pd.get_dummies(
-    preprocess_authors_sections(X[:, author_position], 50)))
+    # author dummies
+    author_d = np.array(pd.get_dummies(
+        preprocess_authors_sections(X[:, author_position], 50)))
 
-# section dummies
-section_d = np.array(pd.get_dummies(X[:, section_position]))
+    # section dummies
+    section_d = np.array(pd.get_dummies(X[:, section_position]))
 
-days = X[:, day_position]
-# remove day from features, only used to divide to training and testing data
-X = np.concatenate((X[:, 0:day_position], hours_d,
-                    X[:, ref_position:author_position], author_d,
-                    section_d), axis=1)
+    days = X[:, day_position]
+    # remove day from features, only used to divide to training and testing
+    # data
+    X = np.concatenate((X[:, 0:day_position], hours_d,
+                        X[:, ref_position:author_position], author_d,
+                        section_d), axis=1)
 
-X = X.astype(float)
-y = y.astype(np.float)
+    X = X.astype(float)
+    y = y.astype(np.float)
 
-# get only clicks, unique users and acceleration for regression
-X = get_basic_features(X)
+    # get only clicks, unique users and acceleration for regression
+    # X = get_basic_features(X)
 
-# X = get_polynomial_features(X)
-X_train, X_test, y_train, y_test = split_set(X, y, days)
+    # X = get_polynomial_features(X)
+    X_train, X_test, y_train, y_test = split_set(X, y, days)
 
-y_predicted = predict_boosted_tree(X_train, y_train, X_test)
-predicted = clear_predictions(y_predicted)
+    y_predicted = predict_svm(X_train, y_train, X_test)
+    predicted = clear_predictions(y_predicted, y)
 
-show_results(y_test, predicted)
-plot_results(y_test, predicted)
+    show_results(y_test, predicted)
+    plot_results(y_test, predicted)
