@@ -66,4 +66,6 @@ SELECT * FROM [piano-academy:riso_dataset.immediately_data]
 WHERE RAND() < 1/20
 ORDER BY clicks DESC
 
-
+SELECT * FROM [piano-academy:riso_dataset.immediately_data]
+WHERE clicks > 10 AND RAND() < 1/5
+ORDER BY clicks DESC
