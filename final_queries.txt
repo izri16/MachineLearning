@@ -31,6 +31,8 @@ INNER JOIN (
   GROUP BY url
 ) t2 ON t1.url = t2.url
 
+// sept_articles_first_hour_concrete
+//
 // concrete data within first hour
 SELECT clicksFirstHour, uniqueUsers, ROUND(inc2/inc1,3) as incRatio, day, hour,
   ROUND(ref/clicksFirstHour,3) as ref, ROUND(desktop/clicksFirstHour,3) as desktop,
@@ -42,10 +44,12 @@ SELECT clicksFirstHour, uniqueUsers, ROUND(inc2/inc1,3) as incRatio, day, hour,
   ROUND(ref_social/clicksFirstHour,3) as ref_social,
   ROUND(country_gb/clicksFirstHour,3) as country_gb,
   ROUND(country_us/clicksFirstHour,3) as country_us,
+  contentCreatedFixed,
   totalClicks
 FROM (
 SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(contentCreatedFixed))) as day,
   COUNT_DISTINCT(browserid) as uniqueUsers,
+  FIRST(contentCreatedFixed) as contentCreatedFixed,
   SUM(CASE WHEN (referrerSegment = "internal") THEN 1 ELSE 0 END) as ref_internal,
   SUM(CASE WHEN (referrerSegment = "direct") THEN 1 ELSE 0 END) as ref_direct,
   SUM(CASE WHEN (referrerSegment = "external") THEN 1 ELSE 0 END) as ref_external,
@@ -64,24 +68,5 @@ SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(contentCreatedFixed))) a
  FROM [piano-academy:riso_dataset.sept_articles_first_hour]
  GROUP by url
 )
-WHERE clicksFirstHour > 3
+WHERE clicksFirstHour > 4
 ORDER by clicksFirstHour desc
-
-// immediately_data (unused now)
-SELECT 
-  DAY(TIMESTAMP(first(contentCreatedFixed))) as day,
-  HOUR(TIMESTAMP(first(contentCreatedFixed))) as hour,
-  FIRST(contentAuthor) as contentAuthor, FIRST(contentSection) as contentSection, COUNT(url) as clicks
-FROM [piano-academy:riso_dataset.articles_clicks_content_created]
-GROUP BY url
-
-// select random data from immediately_data table
-// data are too large and can not be exported directly to .csv file
-// so aproximately 1/20 of random samples should give quite real estimate
-SELECT * FROM [piano-academy:riso_dataset.immediately_data]
-WHERE RAND() < 1/20
-ORDER BY clicks DESC
-
-SELECT * FROM [piano-academy:riso_dataset.immediately_data]
-WHERE clicks > 10 AND RAND() < 1/5
-ORDER BY clicks DESC
