@@ -4,36 +4,39 @@ FROM riso_dataset.logs_hFK5b6ibPi_201609_copy
 WHERE contentCreated IS NOT NULL AND contentCreated > unixTimestamp AND 
     contentAuthor IS NOT NULL AND contentAuthor <> ''
 
-// articles_clicks
-SELECT *
-FROM riso_dataset.logs_hFK5b6ibPi_201609_copy
-WHERE contentAuthor IS NOT NULL AND contentAuthor <> '' AND contentCreated IS NOT NULL
-
-// new contentCreatedFix variable (articles_clicks_content_created)
+// sept_articles_basic
+//
+// seems that for all data when contentCreated is wrong it is shifted max 1 hour
+// so unshift one hour should be fine
 SELECT
-  CASE WHEN (contentCreated > unixTimestamp)
-    THEN USEC_TO_TIMESTAMP(unixTimestamp) ELSE USEC_TO_TIMESTAMP(contentCreated)
+   CASE WHEN (contentCreated > unixTimestamp)
+    THEN DATE_ADD(unixTimestamp, -1, "HOUR") ELSE contentCreated
    END as contentCreatedFixed, *
-FROM riso_dataset.articles_clicks
+FROM riso_dataset.data_september
+WHERE contentAuthor IS NOT NULL AND contentAuthor <> '' AND contentCreated IS NOT NULL
+  AND contentCreated >= "2016-09-01 00:00:00 UTC"
 
-// all within first hour (articles_clicks_first_hour_all)
+// sept_articles_first_hour
+//
+// all data within first hour
 SELECT t1.*, totalClicks
 FROM (
   SELECT *
-  FROM [piano-academy:riso_dataset.articles_clicks_content_created]
+  FROM [piano-academy:riso_dataset.sept_articles_basic]
   WHERE (TIMESTAMP_TO_SEC(unixTimestamp)-TIMESTAMP_TO_SEC(contentCreatedFixed)) < 3600
 ) t1
 INNER JOIN (
   SELECT url, count(*) as totalClicks
-  FROM [piano-academy:riso_dataset.articles_clicks_content_created]
+  FROM [piano-academy:riso_dataset.sept_articles_basic]
   GROUP BY url
 ) t2 ON t1.url = t2.url
 
-/// within first hour concrete data (first_hour_data)
+// concrete data within first hour
 SELECT clicksFirstHour, uniqueUsers, ROUND(inc2/inc1,3) as incRatio, day, hour,
   ROUND(ref/clicksFirstHour,3) as ref, ROUND(desktop/clicksFirstHour,3) as desktop,
-  ROUND(mobile/clicksFirstHour,3) as mobile, ROUND(tablet/clicksFirstHour,3) as tablet, contentAuthor,
-  contentSection, totalClicks
+  ROUND(mobile/clicksFirstHour,3) as mobile, ROUND(tablet/clicksFirstHour,3) as tablet,
+  LOWER(contentAuthor) as contentAuthor, LOWER(contentSection) as contentSection,
+  totalClicks
 FROM (
 SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(contentCreatedFixed))) as day,
   COUNT_DISTINCT(browserid) as uniqueUsers,
@@ -45,13 +48,13 @@ SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(contentCreatedFixed))) a
   SUM(CASE WHEN (platform = "mobile") THEN 1 ELSE 0 END) as mobile,
   SUM(CASE WHEN (platform = "tablet") THEN 1 ELSE 0 END) as tablet,
   FIRST(contentAuthor) as contentAuthor, FIRST(contentSection) as contentSection, FIRST(totalClicks) as totalClicks
- FROM [piano-academy:riso_dataset.articles_clicks_first_hour_all]
+ FROM [piano-academy:riso_dataset.sept_articles_first_hour]
  GROUP by url
 )
 WHERE clicksFirstHour > 3
 ORDER by clicksFirstHour desc
 
-// immediately_data
+// immediately_data (unused now)
 SELECT 
   DAY(TIMESTAMP(first(contentCreatedFixed))) as day,
   HOUR(TIMESTAMP(first(contentCreatedFixed))) as hour,
