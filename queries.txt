@@ -1,6 +1,6 @@
 // get wrong contentCreated values
 SELECT count(*)
-FROM riso_dataset.logs_hFK5b6ibPi_201609_copy
+FROM riso_dataset.data_september
 WHERE contentCreated IS NOT NULL AND contentCreated > unixTimestamp AND 
     contentAuthor IS NOT NULL AND contentAuthor <> ''
 
@@ -68,5 +68,5 @@ SELECT count(*) as clicksFirstHour, DAY(TIMESTAMP(first(contentCreatedFixed))) a
  FROM [piano-academy:riso_dataset.sept_articles_first_hour]
  GROUP by url
 )
-WHERE clicksFirstHour > 4
+WHERE clicksFirstHour > 3
 ORDER by clicksFirstHour desc
