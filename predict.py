@@ -26,7 +26,7 @@ def get_day_times(hour):
 
 def clear_predictions(y_predicted, y):
     '''
-    some values can be predicted weird negative results
+    Some values can be predicted weird negative results
     or weird positive results
     '''
     min_predicted_value = 3
@@ -42,29 +42,39 @@ def clear_predictions(y_predicted, y):
     return np.array(predicted)
 
 
-def show_results(y_test, predicted):
-    print('MAE', round(mt.mean_absolute_error(y_test, predicted), 3))
-    rmspe = np.sqrt(
-        np.mean((np.square(np.divide(y_test - predicted, y_test)))))
-    print('RMSPE', round(rmspe, 5) * 100)
+def print_results(y_test, pred_test, y_train, pred_train):
+    d = {
+        'Train:': [y_train, pred_train],
+        'Test:': [y_test, pred_test]
+    }
+
+    for set_type, sets in d.items():
+        print('\n')
+        print(set_type)
+        print('MAE', round(mt.mean_absolute_error(sets[0], sets[1]), 3))
+        print('RMSE', round(np.sqrt(round(mt.mean_squared_error(sets[0],
+                                                                sets[1]), 3)),
+                            3))
+        rmspe = np.sqrt(
+            np.mean((np.square(np.divide(sets[0] - sets[1], sets[0])))))
+        print('RMSPE', round(rmspe, 5) * 100)
 
 
-def plot_results(y_test, predicted):
+def plot_results(y_test, pred_test, y_train, pred_train):
     plt.figure(1)
     plt.subplot(211)
     plt.plot(y_test, 'ok', label='Test values')
-    plt.plot(predicted, 'or', label='Predicted values')
+    plt.plot(pred_test, 'or', label='Predicted values')
     plt.legend(loc=1)
     plt.title('Results')
-    plt.xlabel('Page view id')
+    plt.xlabel('Article')
     plt.ylabel('Total clicks')
-    plt.ylim([0, 500])
 
     plt.subplot(212)
-    plt.plot(y_test, 'ok', label='Test values')
-    plt.plot(predicted, 'or', label='Predicted values')
+    plt.plot(y_train, 'ok', label='Test values (Trainining set)')
+    plt.plot(pred_train, 'or', label='Predicted values (Training set)')
     plt.legend(loc=1)
-    plt.xlabel('Page view id')
+    plt.xlabel('Article')
     plt.ylabel('Total clicks')
     plt.show()
 
@@ -97,8 +107,9 @@ def predict_regression(x_train, y_train, x_test):
 
 def predict_neural(x_train, y_train, x_test):
     nm = nn.MLPRegressor(
-        alpha=0.0001, hidden_layer_sizes=(100, 100),
-        max_iter=1000, activation='relu')
+        solver='lbfgs',
+        alpha=0.005, hidden_layer_sizes=(100),
+        max_iter=500, activation='relu')
     nm.fit(x_train, y_train)
     return nm.predict(x_test)
 
@@ -112,9 +123,12 @@ def predict_svm(x_train, y_train, x_test):
 
 def predict_random_forest(x_train, y_train, x_test):
     rf = dt.RandomForestRegressor(
-        n_estimators=300, max_depth=30)
+        min_samples_leaf=5,
+        n_estimators=300, max_depth=10)
     rf.fit(x_train, y_train)
-    return rf.predict(x_test)
+    pred_test = rf.predict(x_test)
+    pred_train = rf.predict(x_train)
+    return (pred_test, pred_train)
 
 
 def predict_boosted_tree(x_train, y_train, x_test):
@@ -137,39 +151,46 @@ if __name__ == "__main__":
     scaler = StandardScaler()
     data = pd.read_csv('./data_september.csv')
 
-    # day time dummies
+    # DAY TIME DUMMIES
     day_times = list(map(get_day_times, data['hour'].tolist()))
     data['hour'] = pd.Series(day_times).values
     data = pd.get_dummies(data, columns=['hour'], drop_first=True)
 
-    # section dummies
+    # SECTION DUMMIES
     filtered_sections = list(
         map(filter_sections, data['contentSection'].tolist()))
     data['contentSection'] = pd.Series(filtered_sections).values
     data = pd.get_dummies(data, columns=['contentSection'], drop_first=True)
 
     data = data.fillna(0)  # fill empty values with zeros
-    data = data.sort(['contentCreatedFixed'], ascending=[1])  # sort by date
+    data = data.sort_values(by='contentCreatedFixed',
+                            ascending=True)  # sort by date
 
-    # Drop data that should not be used
-    data = data.drop(['day', 'contentAuthor', 'contentCreatedFixed',
-                      'contentSection_sport', 'contentSection_other',
-                      'contentSection_whats-on',
-                      'ref', 'desktop', 'mobile', 'tablet'], axis=1)
+    # DROP FEATURES THAT SHOULD NOT BE USED
+    data = data.drop(['contentAuthor', 'contentCreatedFixed'], axis=1)
 
-    data = data.drop(['hour_morning', 'hour_night', 'hour_evening'], axis=1)
+    '''
+    data = data.drop(['ref', 'desktop', 'mobile', 'tablet'], axis=1)
+    '''
+
+    '''
+    data = data.drop(['contentSection_sport', 'contentSection_other',
+                      'contentSection_whats-on'], axis=1)
+    '''
+
+    # data = data.drop(['hour_morning', 'hour_night', 'hour_evening'], axis=1)
+    '''
     data = data.drop(['ref_internal', 'ref_direct',
                       'ref_external', 'ref_social'], axis=1)
-    data = data.drop(['country_gb', 'country_us'], axis=1)
-    data = data.drop(['incRatio'], axis=1)
+    '''
+    # data = data.drop(['country_gb', 'country_us'], axis=1)
+    # data = data.drop(['incRatio'], axis=1)
 
     y = data['totalClicks']
     x = data.drop(['totalClicks'], axis=1)
 
-    print(x.columns)
-
-    x.to_csv('x.csv')
-    y.to_csv('y.csv')
+    # GET MOST IMPORTANT FEATURES BASED ON RANDOM FOREST
+    # get_most_important_features(x, y)
 
     x_train = x.iloc[0:TRAIN_END, :]
     x_val = x.iloc[TRAIN_END:VAL_END, :]
@@ -182,33 +203,36 @@ if __name__ == "__main__":
     y_cv = y.iloc[TRAIN_END:VAL_END].values
     y_test = y.iloc[TRAIN_END:data.shape[0]].values
 
-    # save numpy data to file
+    # SAVE UNSCALLED DATA TO FILE
     np.savetxt("x_train.csv", x_train, delimiter=",")
     np.savetxt("y_train.csv", y_train, delimiter=",")
     np.savetxt("x_test.csv", x_test, delimiter=",")
 
-    print(x_train.shape)
+    # SCALE DATA TO HAVE ZERO MEAN AND UNIT VARIANCE
     scaler.fit(x_train)
     x_train = scaler.transform(x_train)
-
-    print(x_train.shape)
+    x_val = scaler.transform(x_val)
     x_test = scaler.transform(x_test)
-    print(x_test.shape)
 
-    np.savetxt("x_train_sc.csv", x_train, delimiter=",")
-    np.savetxt("y_train_sc.csv", y_train, delimiter=",")
-    np.savetxt("x_test_sc.csv", x_test, delimiter=",")
+    # SAVE SCALLED DATA TO FILE
+    np.savetxt("x_train_scalled.csv", x_train, delimiter=",")
+    np.savetxt("y_train_scalled.csv", y_train, delimiter=",")
+    np.savetxt("x_test_scalled.csv", x_test, delimiter=",")
 
-    # GET MOST IMPORTANT FEATURES BASED ON RANDOM FOREST
-    # get_most_important_features(x, y)
+    pred_test, pred_train = predict_random_forest(x_train, y_train, x_test)
+    # pred_test, pred_train = predict_svm(x_train, y_train, x_test)
+    # pred_test, pred_train = predict_boosted_tree(x_train, y_train, x_test)
+    # pred_test, pred_train = predict_neural(x_train, y_train, x_test)
+    # pred_test, pred_train = predict_regression(x_train, y_train, x_test)
 
-    # predicted = predict_random_forest(x_train, y_train, x_test)
-    # predicted = predict_svm(x_train, y_train, x_test)
-    # predicted = predict_boosted_tree(x_train, y_train, x_test)
-    predicted = predict_neural(x_train, y_train, x_test)
-    # predicted = predict_regression(x_train, y_train, x_test)
+    # ROUND ALL VALUES TO INTEGERS
+    pred_test = np.around(pred_test, 0).astype(int)
+    pred_train = np.around(pred_train, 0).astype(int)
 
-    predicted = clear_predictions(predicted, y_test)
+    print('Min value in test set', min(y_test))
+    print('Max value in test set', max(y_test))
+    print('Min predicted value', min(pred_test))
+    print('Max predicted value', max(pred_test))
 
-    show_results(y_test, predicted)
-    plot_results(y_test, predicted)
+    print_results(y_test, pred_test, y_train, pred_train)
+    plot_results(y_test, pred_test, y_train, pred_train)
