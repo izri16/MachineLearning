@@ -1,9 +1,9 @@
-import sklearn.linear_model as lm
 import sklearn.neural_network as nn
 import sklearn.svm as svm
 import sklearn.ensemble as dt
 import pandas as pd
 import numpy as np
+import sklearn.linear_model as rd
 import matplotlib.pyplot as plt
 from sklearn import metrics as mt
 from sklearn.ensemble import ExtraTreesClassifier
@@ -100,9 +100,11 @@ def get_most_important_features(x, y):
 
 
 def predict_regression(x_train, y_train, x_test):
-    lr = lm.LinearRegression()
+    lr = rd.Ridge()
     lr.fit(x_train, y_train)
-    return lr.predict(x_test)
+    pred_test = lr.predict(x_test)
+    pred_train = lr.predict(x_train)
+    return (pred_test, pred_train)
 
 
 def predict_neural(x_train, y_train, x_test):
@@ -111,14 +113,19 @@ def predict_neural(x_train, y_train, x_test):
         alpha=0.005, hidden_layer_sizes=(100),
         max_iter=500, activation='relu')
     nm.fit(x_train, y_train)
-    return nm.predict(x_test)
+    pred_test = nm.predict(x_test)
+    pred_train = nm.predict(x_train)
+    return (pred_test, pred_train)
 
 
+# try linear kernel
 def predict_svm(x_train, y_train, x_test):
     # RBF kernel
     svr = svm.SVR(C=5000, gamma=0.0075)
     svr.fit(x_train, y_train)
-    return svr.predict(x_test)
+    pred_test = svr.predict(x_test)
+    pred_train = svr.predict(x_train)
+    return (pred_test, pred_train)
 
 
 def predict_random_forest(x_train, y_train, x_test):
@@ -132,9 +139,13 @@ def predict_random_forest(x_train, y_train, x_test):
 
 
 def predict_boosted_tree(x_train, y_train, x_test):
-    bt = dt.GradientBoostingRegressor(n_estimators=150, max_depth=10)
+    bt = dt.GradientBoostingRegressor(n_estimators=300, max_depth=6,
+                                      min_samples_leaf=3,
+                                      max_features=10)
     bt.fit(x_train, y_train)
-    return bt.predict(x_test)
+    pred_test = bt.predict(x_test)
+    pred_train = bt.predict(x_train)
+    return (pred_test, pred_train)
 
 
 def filter_sections(section):
@@ -226,8 +237,9 @@ if __name__ == "__main__":
     # pred_test, pred_train = predict_regression(x_train, y_train, x_test)
 
     # ROUND ALL VALUES TO INTEGERS
-    pred_test = np.around(pred_test, 0).astype(int)
-    pred_train = np.around(pred_train, 0).astype(int)
+    pred_test = clear_predictions(np.around(pred_test, 0).astype(int), y_test)
+    pred_train = clear_predictions(
+        np.around(pred_train, 0).astype(int), y_train)
 
     print('Min value in test set', min(y_test))
     print('Max value in test set', max(y_test))
