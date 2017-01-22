@@ -80,7 +80,8 @@ def plot_results(y_test, pred_test, y_train, pred_train):
 
 
 def get_most_important_features(x, y):
-    forest = ExtraTreesClassifier(n_estimators=250,
+    forest = ExtraTreesClassifier(n_estimators=300,
+                                  max_depth=10,
                                   random_state=0)
     forest.fit(x, y)
 
@@ -91,11 +92,11 @@ def get_most_important_features(x, y):
 
     plt.figure(figsize=(25, 15))
     plt.title('Feature importances')
-    plt.bar(range(x_train.shape[1]), importances[indices],
+    plt.bar(range(x.shape[1]), importances[indices],
             color='r', yerr=std[indices], align='center')
-    plt.xticks(range(x_train.shape[1]), np.array(x.columns)[indices],
+    plt.xticks(range(x.shape[1]), np.array(x.columns)[indices],
                rotation='vertical')
-    plt.xlim([-1, x_train.shape[1]])
+    plt.xlim([-1, x.shape[1]])
     plt.savefig('feature_importances.png')
 
 
@@ -178,7 +179,7 @@ if __name__ == "__main__":
                             ascending=True)  # sort by date
 
     # DROP FEATURES THAT SHOULD NOT BE USED
-    data = data.drop(['contentAuthor', 'contentCreatedFixed'], axis=1)
+    data = data.drop(['day', 'contentAuthor', 'contentCreatedFixed'], axis=1)
 
     '''
     data = data.drop(['ref', 'desktop', 'mobile', 'tablet'], axis=1)
@@ -215,9 +216,9 @@ if __name__ == "__main__":
     y_test = y.iloc[TRAIN_END:data.shape[0]].values
 
     # SAVE UNSCALLED DATA TO FILE
-    np.savetxt("x_train.csv", x_train, delimiter=",")
-    np.savetxt("y_train.csv", y_train, delimiter=",")
-    np.savetxt("x_test.csv", x_test, delimiter=",")
+    # np.savetxt("x_train.csv", x_train, delimiter=",")
+    # np.savetxt("y_train.csv", y_train, delimiter=",")
+    # np.savetxt("x_test.csv", x_test, delimiter=",")
 
     # SCALE DATA TO HAVE ZERO MEAN AND UNIT VARIANCE
     scaler.fit(x_train)
@@ -226,9 +227,9 @@ if __name__ == "__main__":
     x_test = scaler.transform(x_test)
 
     # SAVE SCALLED DATA TO FILE
-    np.savetxt("x_train_scalled.csv", x_train, delimiter=",")
-    np.savetxt("y_train_scalled.csv", y_train, delimiter=",")
-    np.savetxt("x_test_scalled.csv", x_test, delimiter=",")
+    # np.savetxt("x_train_scalled.csv", x_train, delimiter=",")
+    # np.savetxt("y_train_scalled.csv", y_train, delimiter=",")
+    # np.savetxt("x_test_scalled.csv", x_test, delimiter=",")
 
     pred_test, pred_train = predict_random_forest(x_train, y_train, x_test)
     # pred_test, pred_train = predict_svm(x_train, y_train, x_test)
