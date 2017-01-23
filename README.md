@@ -10,3 +10,5 @@ python -W ignore predict.py
 ```
 
 Make sure you use python3
+
+To see script for future months predictions checkout to branch <i>future_months</i>
