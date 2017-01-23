@@ -145,13 +145,12 @@ def predict_neural(x_train, y_train, x_val, y_val, x_test):
     nm = nn.MLPRegressor()
 
     parameters = [
-        {'solver': ['lbfgs'],
-         'alpha': [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03,
-                   0.1, 0.3, 1, 3],
-         'max_iter': [200, 400],
+        {'alpha': [0.000001, 0.000003, 0.00001, 0.00003, 0.0001, 0.0003, 0.001,
+                   0.003, 0.01, 0.03],
+         'max_iter': [400],
          'activation': ['relu'],
-         'hidden_layer_sizes': [[15], [30], [50], [100], [15, 15], [50, 50],
-                                [75, 75], [100, 100]],
+         'hidden_layer_sizes': [[30], [50], [75], [100], [30, 30],
+                                [50, 50], [75, 75], [100, 100]],
          }
     ]
 
@@ -271,13 +270,13 @@ if __name__ == "__main__":
 
     # data = data.drop(['ref', 'desktop', 'mobile', 'tablet'], axis=1)
 
-    '''
-    data = data.drop(['contentSection_sport', 'contentSection_other',
+    data = data.drop(['contentSection_other',
+                      'contentSection_sport',
                       'contentSection_whats-on'], axis=1)
-    '''
 
-    # data = data.drop(['hour_morning', 'hour_night', 'hour_evening'], axis=1)
+    data = data.drop(['hour_night', 'hour_morning', 'hour_evening'], axis=1)
 
+    data = data.drop(['ref_social'], axis=1)
     '''
     data = data.drop(['ref_internal', 'ref_direct',
                       'ref_external', 'ref_social'], axis=1)
@@ -287,6 +286,7 @@ if __name__ == "__main__":
 
     y = data['totalClicks']
     x = data.drop(['totalClicks'], axis=1)
+    # x = data[['clicksFirstHour', 'uniqueUsers', 'incRatio']]
 
     # GET MOST IMPORTANT FEATURES BASED ON RANDOM FOREST
     # get_most_important_features(x, y)
@@ -316,10 +316,8 @@ if __name__ == "__main__":
     # np.savetxt("x_test_scalled.csv", x_test, delimiter=",")
 
     # RANDOM FOREST
-    '''
     pred_train, pred_val, pred_test = predict_random_forest(
         x_train, y_train, x_val, y_val, x_test)
-    '''
 
     # SVR
     '''
@@ -334,8 +332,10 @@ if __name__ == "__main__":
     '''
 
     # ANN
+    '''
     pred_train, pred_val, pred_test = predict_neural(
         x_train, y_train, x_val, y_val, x_test)
+    '''
 
     # REGRESSION
     '''
