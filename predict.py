@@ -5,8 +5,6 @@ import pandas as pd
 import numpy as np
 import sklearn.linear_model as rd
 import matplotlib.pyplot as plt
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import PredefinedSplit
 from sklearn import metrics as mt
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.preprocessing import StandardScaler
@@ -44,10 +42,9 @@ def clear_predictions(y_predicted, y):
     return np.array(predicted)
 
 
-def print_results(y_test, pred_test, y_val, pred_val, y_train, pred_train):
+def print_results(y_test, pred_test, y_train, pred_train):
     d = {
         'Train:': [y_train, pred_train],
-        'Validation:': [y_val, pred_val],
         'Test:': [y_test, pred_test]
     }
 
@@ -103,137 +100,51 @@ def get_most_important_features(x, y):
     plt.savefig('feature_importances.png')
 
 
-def get_grid_search_data(x_train, y_train, x_val, y_val):
-    # allows to use validation set instead of cross-validation
-    # using GridSearchCV
-    index_train = [-1] * len(x_train)
-    index_validate = [0] * len(x_val)
-    indexes = index_train + index_validate
-    ps = PredefinedSplit(test_fold=indexes)
-
-    x = np.append(x_train, x_val, axis=0)
-    y = np.append(y_train, y_val, axis=0)
-    score = 'r2'
-
-    return (x, y, ps, score)
-
-
-def predict_regression(x_train, y_train, x_val, y_val, x_test):
-    x, y, ps, score = get_grid_search_data(
-        x_train, y_train, x_val, y_val)
-
+def predict_regression(x_train, y_train, x_test):
     lr = rd.Ridge()
 
-    parameters = [
-        {'alpha': [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 9, 27, 50, 100]}
-    ]
-
-    clf = GridSearchCV(lr, parameters, scoring=score, cv=ps)
-    clf.fit(x, y)
-    pred_test = clf.predict(x_test)
-    pred_val = clf.predict(x_val)
-    pred_train = clf.predict(x_train)
-
-    print('Best params found for Ridge Regression', clf.best_params_)
-    return (pred_train, pred_val, pred_test)
+    lr.fit(x_train, y_train)
+    pred_test = lr.predict(x_test)
+    pred_train = lr.predict(x_train)
+    return (pred_train, pred_test)
 
 
-def predict_neural(x_train, y_train, x_val, y_val, x_test):
-    x, y, ps, score = get_grid_search_data(
-        x_train, y_train, x_val, y_val)
+def predict_neural(x_train, y_train, x_test):
+    nm = nn.MLPRegressor(hidden_layer_sizes=(100, 100))
 
-    nm = nn.MLPRegressor()
-
-    parameters = [
-        {'alpha': [0.000001, 0.000003, 0.00001, 0.00003, 0.0001, 0.0003, 0.001,
-                   0.003, 0.01, 0.03],
-         'max_iter': [400],
-         'activation': ['relu'],
-         'hidden_layer_sizes': [[30], [50], [75], [100], [30, 30],
-                                [50, 50], [75, 75], [100, 100]],
-         }
-    ]
-
-    clf = GridSearchCV(nm, parameters, scoring=score, cv=ps)
-    clf.fit(x, y)
-    pred_test = clf.predict(x_test)
-    pred_val = clf.predict(x_val)
-    pred_train = clf.predict(x_train)
-
-    print('Best params found for Neural Network', clf.best_params_)
-    return (pred_train, pred_val, pred_test)
+    nm.fit(x_train, y_train)
+    pred_test = nm.predict(x_test)
+    pred_train = nm.predict(x_train)
+    return (pred_train, pred_test)
 
 
-def predict_svm(x_train, y_train, x_val, y_val, x_test):
-    x, y, ps, score = get_grid_search_data(
-        x_train, y_train, x_val, y_val)
+def predict_svm(x_train, y_train, x_test):
+    svr = svm.SVR(C=300, kernel='linear')
 
-    svr = svm.SVR()
-    c = [1, 10, 30, 100, 300, 1000, 3000, 5000]
-
-    # try to combine
-    parameters = [
-        {'C': c,
-         'kernel': ['rbf'],
-         'gamma': [0.0001, 0.003, 0.001, 0.003,
-                   0.01, 0.03, 0.1, 0.3, 1, 3]},
-        {'C': c,
-         'kernel': ['linear']
-         }
-    ]
-
-    clf = GridSearchCV(svr, parameters, scoring=score, cv=ps)
-    clf.fit(x, y)
-    pred_test = clf.predict(x_test)
-    pred_val = clf.predict(x_val)
-    pred_train = clf.predict(x_train)
-
-    print('Best params found for SVM', clf.best_params_)
-    return (pred_train, pred_val, pred_test)
+    svr.fit(x_train, y_train)
+    pred_test = svr.predict(x_test)
+    pred_train = svr.predict(x_train)
+    return (pred_train, pred_test)
 
 
-def predict_random_forest(x_train, y_train, x_val, y_val, x_test):
-    x, y, ps, score = get_grid_search_data(
-        x_train, y_train, x_val, y_val)
+def predict_random_forest(x_train, y_train, x_test):
+    rf = dt.RandomForestRegressor(min_samples_leaf=5, n_estimators=150,
+                                  max_depth=15)
 
-    rf = dt.RandomForestRegressor()
-
-    parameters = [
-        {'min_samples_leaf': [5, 6, 7, 10],
-         'n_estimators': [150, 300],
-         'max_depth': [5, 7, 9, 11, 13, 15]}
-    ]
-
-    clf = GridSearchCV(rf, parameters, scoring=score, cv=ps)
-    clf.fit(x, y)
-    pred_test = clf.predict(x_test)
-    pred_val = clf.predict(x_val)
-    pred_train = clf.predict(x_train)
-
-    print('Best params found for Random Forest', clf.best_params_)
-    return (pred_train, pred_val, pred_test)
+    rf.fit(x_train, y_train)
+    pred_test = rf.predict(x_test)
+    pred_train = rf.predict(x_train)
+    return (pred_train, pred_test)
 
 
-def predict_boosted_tree(x_train, y_train, x_val, y_val, x_test):
-    x, y, ps, score = get_grid_search_data(
-        x_train, y_train, x_val, y_val)
+def predict_boosted_tree(x_train, y_train, x_test):
+    bt = dt.GradientBoostingRegressor(min_samples_leaf=5, max_depth=11,
+                                      n_estimators=300)
 
-    bt = dt.GradientBoostingRegressor()
-
-    parameters = [
-        {'min_samples_leaf': [3, 4, 5, 6, 7],
-         'n_estimators': [150, 300],
-         'max_depth': [5, 7, 9, 11, 13, 15]}
-    ]
-
-    clf = GridSearchCV(bt, parameters, scoring=score, cv=ps)
-    clf.fit(x, y)
-    pred_test = clf.predict(x_test)
-    pred_val = clf.predict(x_val)
-    pred_train = clf.predict(x_train)
-
-    print('Best params found for Boosted Tree', clf.best_params_)
-    return (pred_train, pred_val, pred_test)
+    bt.fit(x_train, y_train)
+    pred_test = bt.predict(x_test)
+    pred_train = bt.predict(x_train)
+    return (pred_train, pred_test)
 
 
 def filter_sections(section):
@@ -248,7 +159,11 @@ def filter_sections(section):
 
 if __name__ == "__main__":
     scaler = StandardScaler()
-    data = pd.read_csv('./data_september.csv')
+    data_sept = pd.read_csv('./data_september_authors.csv')
+    data_oct = pd.read_csv('./data_october_authors.csv')
+    data_nov = pd.read_csv('./data_november_authors.csv')
+
+    data = pd.concat([data_sept, data_oct, data_nov])
 
     # DAY TIME DUMMIES
     day_times = list(map(get_day_times, data['hour'].tolist()))
@@ -291,13 +206,11 @@ if __name__ == "__main__":
     # GET MOST IMPORTANT FEATURES BASED ON RANDOM FOREST
     # get_most_important_features(x, y)
 
-    x_train = x.iloc[0:TRAIN_END, :]
-    x_val = x.iloc[TRAIN_END:VAL_END, :]
-    x_test = x.iloc[VAL_END:data.shape[0], :]
+    x_train = x.iloc[0:data_sept.shape[0], :]
+    x_test = x.iloc[data_sept.shape[0]:data.shape[0], :]
 
-    y_train = y.iloc[0:TRAIN_END].values
-    y_val = y.iloc[TRAIN_END:VAL_END].values
-    y_test = y.iloc[VAL_END:data.shape[0]].values
+    y_train = y.iloc[0:data_sept.shape[0]].values
+    y_test = y.iloc[data_sept.shape[0]:data.shape[0]].values
 
     # SAVE UNSCALLED DATA TO FILE
     # np.savetxt("x_train.csv", x_train, delimiter=",")
@@ -307,7 +220,6 @@ if __name__ == "__main__":
     # SCALE DATA TO HAVE ZERO MEAN AND UNIT VARIANCE
     scaler.fit(x_train)
     x_train = scaler.transform(x_train)
-    x_val = scaler.transform(x_val)
     x_test = scaler.transform(x_test)
 
     # SAVE SCALLED DATA TO FILE
@@ -316,32 +228,19 @@ if __name__ == "__main__":
     # np.savetxt("x_test_scalled.csv", x_test, delimiter=",")
 
     # RANDOM FOREST
-    pred_train, pred_val, pred_test = predict_random_forest(
-        x_train, y_train, x_val, y_val, x_test)
+    pred_train, pred_test = predict_random_forest(x_train, y_train, x_test)
 
     # SVR
-    '''
-    pred_train, pred_val, pred_test = predict_svm(
-        x_train, y_train, x_val, y_val, x_test)
-    '''
+    # pred_train, pred_test = predict_svm(x_train, y_train, x_test)
 
     # BOOSTED TREE
-    '''
-    pred_train, pred_val, pred_test = predict_boosted_tree(
-        x_train, y_train, x_val, y_val, x_test)
-    '''
+    # pred_train, pred_test = predict_boosted_tree(x_train, y_train, x_test)
 
     # ANN
-    '''
-    pred_train, pred_val, pred_test = predict_neural(
-        x_train, y_train, x_val, y_val, x_test)
-    '''
+    # pred_train, pred_test = predict_neural(x_train, y_train, x_test)
 
     # REGRESSION
-    '''
-    pred_train, pred_val, pred_test = predict_regression(
-        x_train, y_train, x_val, y_val, x_test)
-    '''
+    pred_train, pred_test = predict_regression(x_train, y_train, x_test)
 
     # ROUND ALL VALUES TO INTEGERS
     pred_test = clear_predictions(np.around(pred_test, 0).astype(int), y_test)
@@ -353,5 +252,5 @@ if __name__ == "__main__":
     print('Min predicted value', min(pred_test))
     print('Max predicted value', max(pred_test))
 
-    print_results(y_test, pred_test, y_val, pred_val, y_train, pred_train)
+    print_results(y_test, pred_test, y_train, pred_train)
     plot_results(y_test, pred_test, y_train, pred_train)

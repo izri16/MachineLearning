@@ -3,4 +3,5 @@
 *.pdf
 graphs/
 __pycache__
+*~
 
