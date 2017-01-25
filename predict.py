@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import sklearn.linear_model as rd
 import matplotlib.pyplot as plt
+import datetime
 from sklearn import metrics as mt
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.preprocessing import StandardScaler
@@ -157,13 +158,90 @@ def filter_sections(section):
     else:
         return 'other'
 
+
+def get_most_important_articles(target, y_test, p_choose,
+                                complete_test_data, x_train):
+    '''
+    Return dictionary of 'p_choose' most important articles for every day.
+    Days are keys in the dict and value is array of indexes of most
+    important (successfull) articles.
+    '''
+    days_oct = {}
+    days_nov = {}
+    selected = days_oct
+    offset = len(x_train)
+
+    for index, value in enumerate(target):
+        timestamp = complete_test_data.loc[index + offset,
+                                           ['contentCreatedFixed']].values
+        utc_timestamp = datetime.datetime.utcfromtimestamp(timestamp)
+        day = utc_timestamp.day
+
+        if (index == data_oct.shape[0]):
+            selected = days_nov
+
+        if not (day in selected):
+            selected[day] = []
+        selected[day].append((index, value))
+
+    # sort predictions for days based on most predicted total clicks
+    for index in days_oct.keys():
+        days_oct[index].sort(key=lambda tup: tup[1])  # inplace
+
+    for index in days_nov.keys():
+        days_nov[index].sort(key=lambda tup: tup[1])  # inplace
+
+    # choose only x percents articles
+    periods = [days_oct, days_nov]
+    top_periods = [{}, {}]
+    for period_index, period in enumerate(periods):
+        for index, value in period.items():
+            count = len(value)
+            choose = count // (100 // p_choose)
+
+            d = {}
+            for i in range(choose):
+                d[value[i][0]] = 1
+            top_periods[period_index][index] = d
+    return (top_periods[0], top_periods[1])
+
+
+def get_success(items_pred, items_test):
+    '''
+    Compare most successfull articles in test_set against
+    predicted articles.
+    '''
+    success = {}
+    all_good = 0
+    total_articles_count = 0
+    avg_success = 0
+    for index, value in items_test.items():
+        good = 0
+        articles_count = len(value.keys())
+        total_articles_count += articles_count
+        for article_id in value.keys():
+            if (article_id in items_pred[index]):
+                good += 1
+        success[index] = round(good / articles_count, 3)
+        all_good += good
+    avg_success = round((all_good / total_articles_count), 3)
+    return (avg_success, success)
+
+
+def plot_periods(periods, score, month, x_label):
+    plt.figure()
+    plt.plot(periods, score)
+    plt.ylabel('Score')
+    plt.xlabel(x_label)
+    plt.savefig('{}_{}.png'.format(month, x_label))
+
 if __name__ == "__main__":
     scaler = StandardScaler()
     data_sept = pd.read_csv('./data_september_authors.csv')
     data_oct = pd.read_csv('./data_october_authors.csv')
     data_nov = pd.read_csv('./data_november_authors.csv')
 
-    data = pd.concat([data_sept, data_oct, data_nov])
+    data = pd.concat([data_sept, data_oct, data_nov], ignore_index=True)
 
     # DAY TIME DUMMIES
     day_times = list(map(get_day_times, data['hour'].tolist()))
@@ -180,31 +258,22 @@ if __name__ == "__main__":
     data = data.sort_values(by='contentCreatedFixed',
                             ascending=True)  # sort by date
 
+    # drop index and create new using sorted values by date
+    data.reset_index(drop=True, inplace=True)
+
+    # use later to group by days
+    complete_test_data = data.iloc[data_sept.shape[0]:data.shape[0], :]
+
     # DROP FEATURES THAT SHOULD NOT BE USED
     data = data.drop(['day', 'contentAuthor', 'contentCreatedFixed'], axis=1)
-
-    # data = data.drop(['ref', 'desktop', 'mobile', 'tablet'], axis=1)
-
     data = data.drop(['contentSection_other',
                       'contentSection_sport',
                       'contentSection_whats-on'], axis=1)
-
     data = data.drop(['hour_night', 'hour_morning', 'hour_evening'], axis=1)
-
     data = data.drop(['ref_social'], axis=1)
-    '''
-    data = data.drop(['ref_internal', 'ref_direct',
-                      'ref_external', 'ref_social'], axis=1)
-    '''
-    # data = data.drop(['country_gb', 'country_us'], axis=1)
-    # data = data.drop(['incRatio'], axis=1)
 
     y = data['totalClicks']
     x = data.drop(['totalClicks'], axis=1)
-    # x = data[['clicksFirstHour', 'uniqueUsers', 'incRatio']]
-
-    # GET MOST IMPORTANT FEATURES BASED ON RANDOM FOREST
-    # get_most_important_features(x, y)
 
     x_train = x.iloc[0:data_sept.shape[0], :]
     x_test = x.iloc[data_sept.shape[0]:data.shape[0], :]
@@ -212,20 +281,10 @@ if __name__ == "__main__":
     y_train = y.iloc[0:data_sept.shape[0]].values
     y_test = y.iloc[data_sept.shape[0]:data.shape[0]].values
 
-    # SAVE UNSCALLED DATA TO FILE
-    # np.savetxt("x_train.csv", x_train, delimiter=",")
-    # np.savetxt("y_train.csv", y_train, delimiter=",")
-    # np.savetxt("x_test.csv", x_test, delimiter=",")
-
     # SCALE DATA TO HAVE ZERO MEAN AND UNIT VARIANCE
     scaler.fit(x_train)
     x_train = scaler.transform(x_train)
     x_test = scaler.transform(x_test)
-
-    # SAVE SCALLED DATA TO FILE
-    # np.savetxt("x_train_scalled.csv", x_train, delimiter=",")
-    # np.savetxt("y_train_scalled.csv", y_train, delimiter=",")
-    # np.savetxt("x_test_scalled.csv", x_test, delimiter=",")
 
     # RANDOM FOREST
     pred_train, pred_test = predict_random_forest(x_train, y_train, x_test)
@@ -240,17 +299,40 @@ if __name__ == "__main__":
     # pred_train, pred_test = predict_neural(x_train, y_train, x_test)
 
     # REGRESSION
-    pred_train, pred_test = predict_regression(x_train, y_train, x_test)
+    # pred_train, pred_test = predict_regression(x_train, y_train, x_test)
 
     # ROUND ALL VALUES TO INTEGERS
     pred_test = clear_predictions(np.around(pred_test, 0).astype(int), y_test)
     pred_train = clear_predictions(
         np.around(pred_train, 0).astype(int), y_train)
 
-    print('Min value in test set', min(y_test))
-    print('Max value in test set', max(y_test))
-    print('Min predicted value', min(pred_test))
-    print('Max predicted value', max(pred_test))
+    # print_results(y_test, pred_test, y_train, pred_train)
+    # plot_results(y_test, pred_test, y_train, pred_train)
 
-    print_results(y_test, pred_test, y_train, pred_train)
-    plot_results(y_test, pred_test, y_train, pred_train)
+    x_per = 10
+    top_oct_pred, top_nov_pred = get_most_important_articles(
+        pred_test, y_test, x_per,
+        complete_test_data, x_train)
+
+    top_oct_test, top_nov_test = get_most_important_articles(
+        y_test, y_test, x_per,
+        complete_test_data, x_train)
+
+    avg_success_oct, success_oct = get_success(items_pred=top_oct_pred,
+                                               items_test=top_oct_test)
+
+    avg_success_nov, success_nov = get_success(items_pred=top_nov_pred,
+                                               items_test=top_nov_test)
+
+    print('October')
+    # print(success_oct)
+    print('Average success', avg_success_oct)
+
+    print('November')
+    # print(success_nov)
+    print('Average success', avg_success_nov)
+
+    plot_periods(list(success_oct.keys()), list(success_oct.values()),
+                 month='October', x_label='Days')
+    plot_periods(list(success_nov.keys()), list(success_nov.values()),
+                 month='November', x_label='Days')
