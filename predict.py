@@ -160,7 +160,7 @@ def filter_sections(section):
 
 
 def get_most_important_articles(target, y_test, p_choose,
-                                complete_test_data, x_train):
+                                complete_test_data, x_train, hour=False):
     '''
     Return dictionary of 'p_choose' most important articles for every day.
     Days are keys in the dict and value is array of indexes of most
@@ -175,14 +175,18 @@ def get_most_important_articles(target, y_test, p_choose,
         timestamp = complete_test_data.loc[index + offset,
                                            ['contentCreatedFixed']].values
         utc_timestamp = datetime.datetime.utcfromtimestamp(timestamp)
-        day = utc_timestamp.day
+        part_of_day = None
+        if (hour):
+            part_of_day = utc_timestamp.hour
+        else:
+            part_of_day = utc_timestamp.day
 
         if (index == data_oct.shape[0]):
             selected = days_nov
 
-        if not (day in selected):
-            selected[day] = []
-        selected[day].append((index, value))
+        if not (part_of_day in selected):
+            selected[part_of_day] = []
+        selected[part_of_day].append((index, value))
 
     # sort predictions for days based on most predicted total clicks
     for index in days_oct.keys():
@@ -222,7 +226,8 @@ def get_success(items_pred, items_test):
         for article_id in value.keys():
             if (article_id in items_pred[index]):
                 good += 1
-        success[index] = round(good / articles_count, 3)
+        if (articles_count):
+            success[index] = round(good / articles_count, 3)
         all_good += good
     avg_success = round((all_good / total_articles_count), 3)
     return (avg_success, success)
@@ -230,7 +235,8 @@ def get_success(items_pred, items_test):
 
 def plot_periods(periods, score, month, x_label):
     plt.figure()
-    plt.plot(periods, score)
+    plt.plot(periods, score, 'o-')
+    plt.title('{} {}'.format(month, x_label))
     plt.ylabel('Score')
     plt.xlabel(x_label)
     plt.savefig('{}_{}.png'.format(month, x_label))
@@ -306,10 +312,11 @@ if __name__ == "__main__":
     pred_train = clear_predictions(
         np.around(pred_train, 0).astype(int), y_train)
 
-    # print_results(y_test, pred_test, y_train, pred_train)
+    print_results(y_test, pred_test, y_train, pred_train)
     # plot_results(y_test, pred_test, y_train, pred_train)
 
     x_per = 10
+
     top_oct_pred, top_nov_pred = get_most_important_articles(
         pred_test, y_test, x_per,
         complete_test_data, x_train)
@@ -336,3 +343,30 @@ if __name__ == "__main__":
                  month='October', x_label='Days')
     plot_periods(list(success_nov.keys()), list(success_nov.values()),
                  month='November', x_label='Days')
+
+    top_oct_pred, top_nov_pred = get_most_important_articles(
+        pred_test, y_test, x_per,
+        complete_test_data, x_train, hour=True)
+
+    top_oct_test, top_nov_test = get_most_important_articles(
+        y_test, y_test, x_per,
+        complete_test_data, x_train, hour=True)
+
+    avg_success_oct, success_oct = get_success(items_pred=top_oct_pred,
+                                               items_test=top_oct_test)
+
+    avg_success_nov, success_nov = get_success(items_pred=top_nov_pred,
+                                               items_test=top_nov_test)
+
+    print('October')
+    # print(success_oct)
+    print('Average success', avg_success_oct)
+
+    print('November')
+    # print(success_nov)
+    print('Average success', avg_success_nov)
+
+    plot_periods(list(success_oct.keys()), list(success_oct.values()),
+                 month='October', x_label='Hours')
+    plot_periods(list(success_nov.keys()), list(success_nov.values()),
+                 month='November', x_label='Hours')
