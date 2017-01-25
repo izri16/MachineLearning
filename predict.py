@@ -233,19 +233,19 @@ def get_success(items_pred, items_test):
     return (avg_success, success)
 
 
-def plot_periods(periods, score, month, x_label):
+def plot_periods(periods, score, month, x_label, per):
     plt.figure()
     plt.plot(periods, score, 'o-')
     plt.title('{} {}'.format(month, x_label))
     plt.ylabel('Score')
     plt.xlabel(x_label)
-    plt.savefig('{}_{}.png'.format(month, x_label))
+    plt.savefig('{}_{}_{}.png'.format(month, x_label, per))
 
 if __name__ == "__main__":
     scaler = StandardScaler()
-    data_sept = pd.read_csv('./data_september_authors.csv')
-    data_oct = pd.read_csv('./data_october_authors.csv')
-    data_nov = pd.read_csv('./data_november_authors.csv')
+    data_sept = pd.read_csv('./data_september.csv')
+    data_oct = pd.read_csv('./data_october.csv')
+    data_nov = pd.read_csv('./data_november.csv')
 
     data = pd.concat([data_sept, data_oct, data_nov], ignore_index=True)
 
@@ -293,10 +293,10 @@ if __name__ == "__main__":
     x_test = scaler.transform(x_test)
 
     # RANDOM FOREST
-    pred_train, pred_test = predict_random_forest(x_train, y_train, x_test)
+    # pred_train, pred_test = predict_random_forest(x_train, y_train, x_test)
 
     # SVR
-    # pred_train, pred_test = predict_svm(x_train, y_train, x_test)
+    pred_train, pred_test = predict_svm(x_train, y_train, x_test)
 
     # BOOSTED TREE
     # pred_train, pred_test = predict_boosted_tree(x_train, y_train, x_test)
@@ -315,58 +315,37 @@ if __name__ == "__main__":
     print_results(y_test, pred_test, y_train, pred_train)
     # plot_results(y_test, pred_test, y_train, pred_train)
 
-    x_per = 10
+    print('\nPeriod statistics:')
+    x_per = 5
 
-    top_oct_pred, top_nov_pred = get_most_important_articles(
-        pred_test, y_test, x_per,
-        complete_test_data, x_train)
+    desired_periods = ['Days', 'Hours']
+    for d_period in desired_periods:
 
-    top_oct_test, top_nov_test = get_most_important_articles(
-        y_test, y_test, x_per,
-        complete_test_data, x_train)
+        print('\n{}'.format(d_period))
 
-    avg_success_oct, success_oct = get_success(items_pred=top_oct_pred,
-                                               items_test=top_oct_test)
+        top_oct_pred, top_nov_pred = get_most_important_articles(
+            pred_test, y_test, x_per,
+            complete_test_data, x_train, hour=d_period == 'Hours')
 
-    avg_success_nov, success_nov = get_success(items_pred=top_nov_pred,
-                                               items_test=top_nov_test)
+        top_oct_test, top_nov_test = get_most_important_articles(
+            y_test, y_test, x_per,
+            complete_test_data, x_train, hour=d_period == 'Hours')
 
-    print('October')
-    # print(success_oct)
-    print('Average success', avg_success_oct)
+        avg_success_oct, success_oct = get_success(items_pred=top_oct_pred,
+                                                   items_test=top_oct_test)
 
-    print('November')
-    # print(success_nov)
-    print('Average success', avg_success_nov)
+        avg_success_nov, success_nov = get_success(items_pred=top_nov_pred,
+                                                   items_test=top_nov_test)
 
-    plot_periods(list(success_oct.keys()), list(success_oct.values()),
-                 month='October', x_label='Days')
-    plot_periods(list(success_nov.keys()), list(success_nov.values()),
-                 month='November', x_label='Days')
+        print('October')
+        # print(success_oct)
+        print('Average success', avg_success_oct)
 
-    top_oct_pred, top_nov_pred = get_most_important_articles(
-        pred_test, y_test, x_per,
-        complete_test_data, x_train, hour=True)
+        print('November')
+        # print(success_nov)
+        print('Average success', avg_success_nov)
 
-    top_oct_test, top_nov_test = get_most_important_articles(
-        y_test, y_test, x_per,
-        complete_test_data, x_train, hour=True)
-
-    avg_success_oct, success_oct = get_success(items_pred=top_oct_pred,
-                                               items_test=top_oct_test)
-
-    avg_success_nov, success_nov = get_success(items_pred=top_nov_pred,
-                                               items_test=top_nov_test)
-
-    print('October')
-    # print(success_oct)
-    print('Average success', avg_success_oct)
-
-    print('November')
-    # print(success_nov)
-    print('Average success', avg_success_nov)
-
-    plot_periods(list(success_oct.keys()), list(success_oct.values()),
-                 month='October', x_label='Hours')
-    plot_periods(list(success_nov.keys()), list(success_nov.values()),
-                 month='November', x_label='Hours')
+        plot_periods(list(success_oct.keys()), list(success_oct.values()),
+                     month='October', x_label=d_period, per=x_per)
+        plot_periods(list(success_nov.keys()), list(success_nov.values()),
+                     month='November', x_label=d_period, per=x_per)
