@@ -32,3 +32,13 @@ python -W ignore projekt.py
 ```
 
 The script creates various plots and displays results
+
+## Reinforcement learning
+
+In <i>rl</i> folder is a script for grid space with agent in it.
+Agent finds food using Q-learning
+
+```
+python rl.py
+```
+
