@@ -19,6 +19,8 @@ To see script for future months predictions checkout to branch <i>future_months<
 
 ## Predict students characteristic (Classification-like project)
 
+See folder <i>students_stats</i>
+
 Predict characteristic like health, alkohol consumption etc
 
 Used data from <a>https://www.kaggle.com/uciml/student-alcohol-consumption</a>
