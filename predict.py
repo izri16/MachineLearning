@@ -230,7 +230,7 @@ def get_success(items_pred, items_test):
             success[index] = round(good / articles_count, 3)
         all_good += good
     avg_success = round((all_good / total_articles_count), 3)
-    return (avg_success, success)
+    return (avg_success, success, all_good, total_articles_count)
 
 
 def plot_periods(periods, score, month, x_label, per):
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     # plot_results(y_test, pred_test, y_train, pred_train)
 
     print('\nPeriod statistics:')
-    x_per = 5
+    x_per = 25
 
     desired_periods = ['Days', 'Hours']
     for d_period in desired_periods:
@@ -331,19 +331,21 @@ if __name__ == "__main__":
             y_test, y_test, x_per,
             complete_test_data, x_train, hour=d_period == 'Hours')
 
-        avg_success_oct, success_oct = get_success(items_pred=top_oct_pred,
-                                                   items_test=top_oct_test)
+        avg_success_oct, success_oct, all_good_o, t_o = get_success(
+            items_pred=top_oct_pred, items_test=top_oct_test)
 
-        avg_success_nov, success_nov = get_success(items_pred=top_nov_pred,
-                                                   items_test=top_nov_test)
+        avg_success_nov, success_nov, all_good_n, t_n = get_success(
+            items_pred=top_nov_pred, items_test=top_nov_test)
 
         print('October')
         # print(success_oct)
         print('Average success', avg_success_oct)
+        print('Good vs all', all_good_o, t_o)
 
         print('November')
         # print(success_nov)
         print('Average success', avg_success_nov)
+        print('Good vs all', all_good_n, t_n)
 
         plot_periods(list(success_oct.keys()), list(success_oct.values()),
                      month='October', x_label=d_period, per=x_per)
